@@ -203,7 +203,7 @@ class UploadEndpointsMixin(object):
         if is_sidecar:
             return params
 
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api(endpoint, params=params)
         if self.auto_patch and res.get('media'):
             ClientCompatPatch.media(res.get('media'), drop_incompat_keys=self.drop_incompat_keys)
@@ -276,7 +276,7 @@ class UploadEndpointsMixin(object):
         if is_sidecar:
             return params
 
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api('media/configure/', params=params, query={'video': 1})
         if res.get('media') and self.auto_patch:
             ClientCompatPatch.media(res.get('media'), drop_incompat_keys=self.drop_incompat_keys)
@@ -319,7 +319,7 @@ class UploadEndpointsMixin(object):
                 'source_height': height,
             }
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api(endpoint, params=params)
         if self.auto_patch and res.get('media'):
             ClientCompatPatch.media(res.get('media'), drop_incompat_keys=self.drop_incompat_keys)
@@ -371,7 +371,7 @@ class UploadEndpointsMixin(object):
             },
         }
 
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api('media/configure_to_story/', params=params, query={'video': '1'})
         if self.auto_patch and res.get('media'):
             ClientCompatPatch.media(res.get('media'), drop_incompat_keys=self.drop_incompat_keys)
@@ -397,7 +397,7 @@ class UploadEndpointsMixin(object):
         warnings.warn('This endpoint has not been fully tested.', UserWarning)
 
         # if upload_id is provided, it's a thumbnail for a vid upload
-        for_video = True if upload_id else False
+        for_video = bool(upload_id)
 
         if not for_video:
             if not to_reel and not self.compatible_aspect_ratio(size):
@@ -411,7 +411,7 @@ class UploadEndpointsMixin(object):
         location = kwargs.pop('location', None)
         if location:
             self._validate_location(location)
-        disable_comments = True if kwargs.pop('disable_comments', False) else False
+        disable_comments = bool(kwargs.pop('disable_comments', False))
 
         is_sidecar = kwargs.pop('is_sidecar', False)
         if not upload_id:
@@ -451,8 +451,10 @@ class UploadEndpointsMixin(object):
         except (SSLError, timeout, SocketError,
                 compat_urllib_error.URLError,   # URLError is base of HTTPError
                 compat_http_client.HTTPException) as connection_error:
-            raise ClientConnectionError('{} {}'.format(
-                connection_error.__class__.__name__, str(connection_error)))
+            raise ClientConnectionError(
+                f'{connection_error.__class__.__name__} {str(connection_error)}'
+            )
+
 
         post_response = self._read_response(response)
         self.logger.debug('RESPONSE: {0:d} {1!s}'.format(response.code, post_response))

@@ -90,7 +90,6 @@ class ClientTests(ApiTestBase):
             Client.validate_useragent(ua)
 
     def test_generate_useragent(self):
-        self.sleep_interval = 0
         custom_device = {
             'manufacturer': 'Samsung',
             'model': 'maguro',
@@ -101,6 +100,7 @@ class ClientTests(ApiTestBase):
             'resolution': '720x1280',
             'chipset': 'qcom'
         }
+        self.sleep_interval = 0
         custom_ua = Client.generate_useragent(
             android_release=custom_device['android_release'],
             android_version=custom_device['android_version'],
@@ -113,20 +113,7 @@ class ClientTests(ApiTestBase):
         )
         self.assertEqual(
             custom_ua,
-            'Instagram %s Android (%s/%s; %s; %s; '
-            '%s; %s; %s; %s; en_US; %s)'
-            % (
-                Constants.APP_VERSION,
-                custom_device['android_version'],
-                custom_device['android_release'],
-                custom_device['dpi'],
-                custom_device['resolution'],
-                custom_device['manufacturer'],
-                custom_device['device'],
-                custom_device['model'],
-                custom_device['chipset'],
-                Constants.VERSION_CODE,
-            )
+            f"Instagram {Constants.APP_VERSION} Android ({custom_device['android_version']}/{custom_device['android_release']}; {custom_device['dpi']}; {custom_device['resolution']}; {custom_device['manufacturer']}; {custom_device['device']}; {custom_device['model']}; {custom_device['chipset']}; en_US; {Constants.VERSION_CODE})",
         )
 
     def test_cookiejar_dump(self):
@@ -143,9 +130,7 @@ class ClientTests(ApiTestBase):
         self.sleep_interval = 0
         chunk_data = 'abcdefghijklmnopqrstuvwxyz'
         chunk_size = 5
-        chunk_count = 0
-        for chunk_info, data in max_chunk_size_generator(chunk_size, chunk_data):
-            chunk_count += 1
+        for chunk_count, (chunk_info, data) in enumerate(max_chunk_size_generator(chunk_size, chunk_data), start=1):
             self.assertIsNotNone(data, 'Empty chunk.')
             self.assertLessEqual(len(data), chunk_size, 'Chunk size is too big.')
             self.assertEqual(len(data), chunk_info.length, 'Chunk length is wrong.')

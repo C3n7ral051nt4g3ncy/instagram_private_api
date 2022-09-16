@@ -17,8 +17,7 @@ class TagsEndpointsMixin(object):
         """
         endpoint = 'tags/{tag!s}/info/'.format(
             **{'tag': compat_urllib_parse.quote(tag.encode('utf8'))})
-        res = self._call_api(endpoint)
-        return res
+        return self._call_api(endpoint)
 
     def tag_related(self, tag, **kwargs):
         """
@@ -32,8 +31,7 @@ class TagsEndpointsMixin(object):
         query = {
             'visited': json.dumps([{'id': tag, 'type': 'hashtag'}], separators=(',', ':')),
             'related_types': json.dumps(['hashtag', 'location'], separators=(',', ':'))}
-        res = self._call_api(endpoint, query=query)
-        return res
+        return self._call_api(endpoint, query=query)
 
     def tag_search(self, text, rank_token, exclude_list=[], **kwargs):
         """
@@ -55,10 +53,9 @@ class TagsEndpointsMixin(object):
             'count': 30,
             'exclude_list': json.dumps(exclude_list, separators=(',', ':')),
             'rank_token': rank_token,
-        }
-        query.update(kwargs)
-        res = self._call_api('tags/search/', query=query)
-        return res
+        } | kwargs
+
+        return self._call_api('tags/search/', query=query)
 
     def tags_user_following(self, user_id):
         """
@@ -111,7 +108,7 @@ class TagsEndpointsMixin(object):
         """
         valid_tabs = ['top', 'recent', 'places']
         if tab not in valid_tabs:
-            raise ValueError('Invalid tab: {}'.format(tab))
+            raise ValueError(f'Invalid tab: {tab}')
 
         extract_media_only = kwargs.pop('extract', False)
         endpoint = 'tags/{tag!s}/sections/'.format(
@@ -134,7 +131,7 @@ class TagsEndpointsMixin(object):
         kwargs.pop('page', None)
         kwargs.pop('next_media_ids', None)
 
-        params.update(kwargs)
+        params |= kwargs
         results = self._call_api(endpoint, params=params, unsigned=True)
         extracted_medias = []
         if self.auto_patch:
@@ -144,6 +141,4 @@ class TagsEndpointsMixin(object):
                         ClientCompatPatch.media(m['media'], drop_incompat_keys=self.drop_incompat_keys)
                         if extract_media_only:
                             extracted_medias.append(m['media'])
-        if extract_media_only:
-            return extracted_medias
-        return results
+        return extracted_medias if extract_media_only else results

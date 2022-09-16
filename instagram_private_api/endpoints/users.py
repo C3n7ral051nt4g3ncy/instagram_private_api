@@ -80,8 +80,8 @@ class UsersEndpointsMixin(object):
             'q': query,
             'timezone_offset': self.timezone_offset,
             'count': 50,
-        }
-        query_params.update(kwargs)
+        } | kwargs
+
         res = self._call_api('users/search/', query=query_params)
         if self.auto_patch:
             [ClientCompatPatch.list_user(u, drop_incompat_keys=self.drop_incompat_keys)
@@ -156,5 +156,5 @@ class UsersEndpointsMixin(object):
             params['reel_auto_archive'] = reel_auto_archive
         if save_to_camera_roll is not None:
             params['save_to_camera_roll'] = '1' if save_to_camera_roll else '0'
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('users/set_reel_settings/', params=params)

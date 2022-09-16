@@ -110,7 +110,7 @@ class UsersTests(ApiTestBase):
     def test_set_reel_settings_mock(self, call_api):
         call_api.return_value = {'status': 'ok', 'message_prefs': 'anyone'}
         params = {'message_prefs': call_api.return_value['message_prefs']}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.set_reel_settings(call_api.return_value['message_prefs'])
         call_api.assert_called_with('users/set_reel_settings/', params=params)
 

@@ -65,8 +65,11 @@ class ApiUtilsTests(unittest.TestCase):
             chunks_generated.append(chunk)
 
         self.assertEqual(
-            sum([c.length for c in chunks_generated]), len(file_data),
-            'ig_chunk_generator: incorrect chunk total')
+            sum(c.length for c in chunks_generated),
+            len(file_data),
+            'ig_chunk_generator: incorrect chunk total',
+        )
+
         self.assertEqual(
             len(chunks_generated), 3, 'ig_chunk_generator: incorrect chunk count')
 
@@ -75,8 +78,11 @@ class ApiUtilsTests(unittest.TestCase):
             self.assertEqual(chunk.length, len(data))
             chunks_generated.append(chunk)
         self.assertEqual(
-            sum([c.length for c in chunks_generated]), len(file_data),
-            'max_chunk_size_generator: incorrect chunk total')
+            sum(c.length for c in chunks_generated),
+            len(file_data),
+            'max_chunk_size_generator: incorrect chunk total',
+        )
+
         self.assertEqual(
             len(chunks_generated), 5, 'max_chunk_size_generator: incorrect chunk count')
 
@@ -85,8 +91,11 @@ class ApiUtilsTests(unittest.TestCase):
             self.assertEqual(chunk.length, len(data))
             chunks_generated.append(chunk)
         self.assertEqual(
-            sum([c.length for c in chunks_generated]), len(file_data),
-            'max_chunk_count_generator: incorrect chunk total')
+            sum(c.length for c in chunks_generated),
+            len(file_data),
+            'max_chunk_count_generator: incorrect chunk total',
+        )
+
         self.assertEqual(
             len(chunks_generated), 4, 'max_chunk_count_generator: incorrect chunk count')
 

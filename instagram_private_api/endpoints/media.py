@@ -58,8 +58,7 @@ class MediaEndpointsMixin(object):
         :return:
         """
         endpoint = 'media/{media_id!s}/permalink/'.format(**{'media_id': media_id})
-        res = self._call_api(endpoint)
-        return res
+        return self._call_api(endpoint)
 
     def media_comments(self, media_id, **kwargs):
         """
@@ -75,7 +74,7 @@ class MediaEndpointsMixin(object):
             'can_support_threading': 'true'
         }
         if kwargs:
-            query.update(kwargs)
+            query |= kwargs
         res = self._call_api(endpoint, query=query)
 
         if self.auto_patch:
@@ -107,9 +106,9 @@ class MediaEndpointsMixin(object):
                 and len(comments) < n):
 
             if results.get('has_more_comments'):
-                kwargs.update({'max_id': results.get('next_max_id')})
+                kwargs['max_id'] = results.get('next_max_id')
             else:
-                kwargs.update({'min_id': results.get('next_min_id')})
+                kwargs['min_id'] = results.get('next_min_id')
 
             results = self._call_api(endpoint, query=kwargs)
             comments.extend(results.get('comments', []))
@@ -160,7 +159,7 @@ class MediaEndpointsMixin(object):
             **{'media_id': media_id, 'comment_id': comment_id})
         query = {'max_id': max_id}
         if kwargs:
-            query.update(kwargs)
+            query |= kwargs
         res = self._call_api(endpoint, query=query)
         if self.auto_patch:
             [ClientCompatPatch.comment(c, drop_incompat_keys=self.drop_incompat_keys)
@@ -187,7 +186,7 @@ class MediaEndpointsMixin(object):
             usertags = []
         endpoint = 'media/{media_id!s}/edit_media/'.format(**{'media_id': media_id})
         params = {'caption_text': caption}
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         if usertags:
             utags = {'in': [{'user_id': u['user_id'], 'position': u['position']} for u in usertags]}
             params['usertags'] = json.dumps(utags, separators=(',', ':'))
@@ -208,7 +207,7 @@ class MediaEndpointsMixin(object):
         """
         endpoint = 'media/{media_id!s}/delete/'.format(**{'media_id': media_id})
         params = {'media_id': media_id}
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api(endpoint, params=params)
 
     def post_comment(self, media_id, comment_text):
@@ -262,7 +261,7 @@ class MediaEndpointsMixin(object):
             'containermodule': 'comments_feed_timeline',
             'radio_type': self.radio_type,
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api(endpoint, params=params)
         if self.auto_patch:
             ClientCompatPatch.comment(res['comment'], drop_incompat_keys=self.drop_incompat_keys)
@@ -282,9 +281,8 @@ class MediaEndpointsMixin(object):
         endpoint = 'media/{media_id!s}/comment/{comment_id!s}/delete/'.format(**{
             'media_id': media_id, 'comment_id': comment_id})
         params = {}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def bulk_delete_comments(self, media_id, comment_ids):
         """
@@ -305,9 +303,8 @@ class MediaEndpointsMixin(object):
             'comment_ids_to_delete': ','.join(
                 [str(comment_id) for comment_id in comment_ids])
         }
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def media_likers(self, media_id, **kwargs):
         """
@@ -355,10 +352,8 @@ class MediaEndpointsMixin(object):
             'module_name': module_name,
             'radio_type': self.radio_type,
         }
-        params.update(self.authenticated_params)
-        # d query param = flag for double tap
-        res = self._call_api(endpoint, params=params, query={'d': '1'})
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params, query={'d': '1'})
 
     def delete_like(self, media_id, module_name='feed_timeline'):
         """
@@ -377,9 +372,8 @@ class MediaEndpointsMixin(object):
             'module_name': module_name,
             'radio_type': self.radio_type,
         }
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def media_seen(self, reels):
         """
@@ -417,9 +411,8 @@ class MediaEndpointsMixin(object):
             params = {'reels': reels_seen}
         else:
             params = {'reels': reels}
-        params.update(self.authenticated_params)
-        res = self._call_api('media/seen/', params=params, version='v2')
-        return res
+        params |= self.authenticated_params
+        return self._call_api('media/seen/', params=params, version='v2')
 
     def comment_like(self, comment_id):
         """
@@ -481,7 +474,7 @@ class MediaEndpointsMixin(object):
             if isinstance(added_collection_ids, str):
                 added_collection_ids = [added_collection_ids]
             params['added_collection_ids'] = json.dumps(added_collection_ids, separators=(',', ':'))
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api(endpoint, params=params)
 
     def unsave_photo(self, media_id, removed_collection_ids=None):
@@ -501,7 +494,7 @@ class MediaEndpointsMixin(object):
             if isinstance(removed_collection_ids, str):
                 removed_collection_ids = [removed_collection_ids]
             params['removed_collection_ids'] = json.dumps(removed_collection_ids, separators=(',', ':'))
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api(endpoint, params=params)
 
     def disable_comments(self, media_id):
@@ -519,8 +512,7 @@ class MediaEndpointsMixin(object):
             '_csrftoken': self.csrftoken,
             '_uuid': self.uuid,
         }
-        res = self._call_api(endpoint, params=params, unsigned=True)
-        return res
+        return self._call_api(endpoint, params=params, unsigned=True)
 
     def enable_comments(self, media_id):
         """
@@ -538,8 +530,7 @@ class MediaEndpointsMixin(object):
             '_csrftoken': self.csrftoken,
             '_uuid': self.uuid,
         }
-        res = self._call_api(endpoint, params=params, unsigned=True)
-        return res
+        return self._call_api(endpoint, params=params, unsigned=True)
 
     def media_only_me(self, media_id, media_type, undo=False):
         """
@@ -557,14 +548,18 @@ class MediaEndpointsMixin(object):
         if media_type not in MediaTypes.ALL:
             raise ValueError('Invalid media type.')
 
-        endpoint = 'media/{media_id!s}/{only_me!s}/'.format(**{
-            'media_id': media_id,
-            'only_me': 'only_me' if not undo else 'undo_only_me'
-        })
+        endpoint = 'media/{media_id!s}/{only_me!s}/'.format(
+            **{
+                'media_id': media_id,
+                'only_me': 'undo_only_me' if undo else 'only_me',
+            }
+        )
+
         params = {'media_id': media_id}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params, query={'media_type': media_type})
-        return res
+        params |= self.authenticated_params
+        return self._call_api(
+            endpoint, params=params, query={'media_type': media_type}
+        )
 
     def media_undo_only_me(self, media_id, media_type):
         """

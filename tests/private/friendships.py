@@ -162,7 +162,7 @@ class FriendshipTests(ApiTestBase):
             'friendship_status': {'following': True}}
         user_id = '2958144170'
         params = {'user_id': user_id, 'radio_type': self.api.radio_type}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.friendships_create(user_id)
         call_api.assert_called_with(
             'friendships/create/{user_id!s}/'.format(**{'user_id': user_id}),
@@ -179,7 +179,7 @@ class FriendshipTests(ApiTestBase):
         call_api.return_value = {'status': 'ok', 'following': False}
         user_id = '2958144170'
         params = {'user_id': user_id, 'radio_type': self.api.radio_type}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.friendships_destroy(user_id)
         call_api.assert_called_with(
             'friendships/destroy/{user_id!s}/'.format(**{'user_id': user_id}),
@@ -196,7 +196,7 @@ class FriendshipTests(ApiTestBase):
         call_api.return_value = {'status': 'ok', 'blocking': True}
         user_id = '2958144170'
         params = {'user_id': user_id}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.friendships_block(user_id)
         call_api.assert_called_with(
             'friendships/block/{user_id!s}/'.format(**{'user_id': user_id}),
@@ -207,7 +207,7 @@ class FriendshipTests(ApiTestBase):
         call_api.return_value = {'status': 'ok', 'blocking': False}
         user_id = '2958144170'
         params = {'user_id': user_id}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.friendships_unblock(user_id)
         call_api.assert_called_with(
             'friendships/unblock/{user_id!s}/'.format(**{'user_id': user_id}),
@@ -223,7 +223,7 @@ class FriendshipTests(ApiTestBase):
         call_api.return_value = {'status': 'ok', 'blocking': True}
         user_id = '2958144170'
         params = {'source': 'main_feed'}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.block_friend_reel(user_id)
         call_api.assert_called_with(
             'friendships/block_friend_reel/{user_id!s}/'.format(**{'user_id': user_id}),
@@ -246,7 +246,7 @@ class FriendshipTests(ApiTestBase):
         params = {
             'source': 'settings',
             'user_block_statuses': {user_id: 'unblock'}}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         call_api.assert_called_with(
             'friendships/set_reel_block_status/', params=params)
 
@@ -274,7 +274,7 @@ class FriendshipTests(ApiTestBase):
         user_id = '123456789'
         self.api.ignore_user(user_id)
         params = {'user_id': user_id, 'radio_type': self.api.radio_type}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         call_api.assert_called_with(
             'friendships/ignore/{user_id!s}/'.format(**{'user_id': user_id}),
             params=params)
@@ -285,7 +285,7 @@ class FriendshipTests(ApiTestBase):
         user_id = '123456789'
         self.api.remove_follower(user_id)
         params = {'user_id': user_id, 'radio_type': self.api.radio_type}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         call_api.assert_called_with(
             'friendships/remove_follower/{user_id!s}/'.format(**{'user_id': user_id}),
             params=params)

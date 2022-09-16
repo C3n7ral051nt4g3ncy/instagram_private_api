@@ -28,7 +28,7 @@ class LiveEndpointsMixin(object):
         broadcast_id = str(broadcast_id)
         endpoint = 'live/{broadcast_id!s}/like/'.format(**{'broadcast_id': broadcast_id})
         params = {'user_like_count': str(like_count)}
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api(endpoint, params=params)
 
     def broadcast_like_count(self, broadcast_id, like_ts=0):
@@ -91,7 +91,7 @@ class LiveEndpointsMixin(object):
             'user_breadcrumb': gen_user_breadcrumb(len(comment_text)),
             'idempotence_token': self.generate_uuid(),
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api(endpoint, params=params)
         if self.auto_patch and res.get('comment'):
             ClientCompatPatch.comment(res['comment'])

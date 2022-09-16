@@ -104,15 +104,13 @@ class Client(object):
 
         proxy_handler = kwargs.pop('proxy_handler', None)
         if not proxy_handler:
-            proxy = kwargs.pop('proxy', None)
-            if proxy:
+            if proxy := kwargs.pop('proxy', None):
                 warnings.warn('Proxy support is alpha.', UserWarning)
                 parsed_url = compat_urllib_parse_urlparse(proxy)
-                if parsed_url.netloc and parsed_url.scheme:
-                    proxy_address = '{0!s}://{1!s}'.format(parsed_url.scheme, parsed_url.netloc)
-                    proxy_handler = compat_urllib_request.ProxyHandler({'https': proxy_address})
-                else:
+                if not parsed_url.netloc or not parsed_url.scheme:
                     raise ValueError('Invalid proxy argument: {0!s}'.format(proxy))
+                proxy_address = '{0!s}://{1!s}'.format(parsed_url.scheme, parsed_url.netloc)
+                proxy_handler = compat_urllib_request.ProxyHandler({'https': proxy_address})
         handlers = []
         if proxy_handler:
             handlers.append(proxy_handler)
@@ -143,10 +141,14 @@ class Client(object):
         return self.opener.cookie_jar
 
     def get_cookie_value(self, key):
-        for cookie in self.cookie_jar:
-            if cookie.name.lower() == key.lower():
-                return cookie.value
-        return None
+        return next(
+            (
+                cookie.value
+                for cookie in self.cookie_jar
+                if cookie.name.lower() == key.lower()
+            ),
+            None,
+        )
 
     @property
     def csrftoken(self):
@@ -166,9 +168,7 @@ class Client(object):
 
     @property
     def is_authenticated(self):
-        if self.authenticated_user_id:
-            return True
-        return False
+        return bool(self.authenticated_user_id)
 
     @property
     def settings(self):
@@ -189,12 +189,10 @@ class Client(object):
         :param response:
         :return:
         """
-        if response.info().get('Content-Encoding') == 'gzip':
-            buf = BytesIO(response.read())
-            res = gzip.GzipFile(fileobj=buf).read().decode('utf8')
-        else:
-            res = response.read().decode('utf8')
-        return res
+        if response.info().get('Content-Encoding') != 'gzip':
+            return response.read().decode('utf8')
+        buf = BytesIO(response.read())
+        return gzip.GzipFile(fileobj=buf).read().decode('utf8')
 
     def generate_request_signature(self, query, endpoint=None):
         if self.rhx_gis and query.get('query_hash') and query.get('variables'):
@@ -233,19 +231,19 @@ class Client(object):
                 'Connection': 'close',
             }
             if params or params == '':
-                headers.update({
+                headers |= {
                     'x-csrftoken': self.csrftoken,
                     'x-requested-with': 'XMLHttpRequest',
                     'x-instagram-ajax': self.rollout_hash,
                     'Referer': 'https://www.instagram.com',
                     'Authority': 'www.instagram.com',
                     'Origin': 'https://www.instagram.com',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                })
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+
         if query:
             url += ('?' if '?' not in url else '&') + compat_urllib_parse.urlencode(query)
-            sig = self.generate_request_signature(query, url)
-            if sig:
+            if sig := self.generate_request_signature(query, url):
                 headers['X-Instagram-GIS'] = sig
 
         req = compat_urllib_request.Request(url, headers=headers)
@@ -253,28 +251,36 @@ class Client(object):
             req.get_method = get_method
 
         data = None
-        if params or params == '':
-            if params == '':    # force post if empty string
-                data = ''.encode('ascii')
-            else:
-                data = compat_urllib_parse.urlencode(params).encode('ascii')
+        if params and params == '' or not params and params == '':    # force post if empty string
+            data = ''.encode('ascii')
+        elif params:
+            data = compat_urllib_parse.urlencode(params).encode('ascii')
         try:
             self.logger.debug('REQUEST: {0!s} {1!s}'.format(url, req.get_method()))
-            self.logger.debug('REQ HEADERS: {0!s}'.format(
-                ['{}: {}'.format(k, v) for k, v in headers.items()]
-            ))
-            self.logger.debug('REQ COOKIES: {0!s}'.format(
-                ['{}: {}'.format(c.name, c.value) for c in self.cookie_jar]
-            ))
+            self.logger.debug(
+                'REQ HEADERS: {0!s}'.format(
+                    [f'{k}: {v}' for k, v in headers.items()]
+                )
+            )
+
+            self.logger.debug(
+                'REQ COOKIES: {0!s}'.format(
+                    [f'{c.name}: {c.value}' for c in self.cookie_jar]
+                )
+            )
+
             self.logger.debug('REQ DATA: {0!s}'.format(data))
             res = self.opener.open(req, data=data, timeout=self.timeout)
 
             self.logger.debug('RESPONSE: {0:d} {1!s}'.format(
                 res.code, res.geturl()
             ))
-            self.logger.debug('RES HEADERS: {0!s}'.format(
-                [u'{}: {}'.format(k, v) for k, v in res.info().items()]
-            ))
+            self.logger.debug(
+                'RES HEADERS: {0!s}'.format(
+                    [f'{k}: {v}' for k, v in res.info().items()]
+                )
+            )
+
 
             if return_response:
                 return res
@@ -297,8 +303,9 @@ class Client(object):
                 compat_urllib_error.URLError,   # URLError is base of HTTPError
                 compat_http_client.HTTPException,
                 ConnectionError) as connection_error:
-            raise ClientConnectionError('{} {}'.format(
-                connection_error.__class__.__name__, str(connection_error)))
+            raise ClientConnectionError(
+                f'{connection_error.__class__.__name__} {str(connection_error)}'
+            )
 
     @staticmethod
     def _sanitise_media_id(media_id):
@@ -309,28 +316,26 @@ class Client(object):
 
     @staticmethod
     def _extract_rhx_gis(html):
-        mobj = re.search(
-            r'"rhx_gis":"(?P<rhx_gis>[a-f0-9]{32})"', html, re.MULTILINE)
-        if mobj:
-            return mobj.group('rhx_gis')
+        if mobj := re.search(
+            r'"rhx_gis":"(?P<rhx_gis>[a-f0-9]{32})"', html, re.MULTILINE
+        ):
+            return mobj['rhx_gis']
         return None
 
     @staticmethod
     def _extract_csrftoken(html):
-        mobj = re.search(
-            r'"csrf_token":"(?P<csrf_token>[A-Za-z0-9]+)"', html, re.MULTILINE)
-
-        if mobj:
-            return mobj.group('csrf_token')
+        if mobj := re.search(
+            r'"csrf_token":"(?P<csrf_token>[A-Za-z0-9]+)"', html, re.MULTILINE
+        ):
+            return mobj['csrf_token']
         return None
 
     @staticmethod
     def _extract_rollout_hash(html):
-        mobj = re.search(
-            r'"rollout_hash":"(?P<rollout_hash>[A-Za-z0-9]+)"', html, re.MULTILINE)
-
-        if mobj:
-            return mobj.group('rollout_hash')
+        if mobj := re.search(
+            r'"rollout_hash":"(?P<rollout_hash>[A-Za-z0-9]+)"', html, re.MULTILINE
+        ):
+            return mobj['rollout_hash']
         return None
 
     def _init_rollout_hash(self):
@@ -358,8 +363,7 @@ class Client(object):
         rhx_gis = self._extract_rhx_gis(init_res_content)
         self.rhx_gis = rhx_gis
 
-        rollout_hash = self._extract_rollout_hash(init_res_content)
-        if rollout_hash:
+        if rollout_hash := self._extract_rollout_hash(init_res_content):
             self.rollout_hash = rollout_hash
 
         if not self.csrftoken:
@@ -385,7 +389,9 @@ class Client(object):
         params = {'username': self.username, 'password': self.password, 'queryParams': '{}'}
         self._init_rollout_hash()
         login_res = self._make_request('https://www.instagram.com/accounts/login/ajax/', params=params)
-        if not login_res.get('status', '') == 'ok' or not login_res.get('authenticated'):
+        if login_res.get('status', '') != 'ok' or not login_res.get(
+            'authenticated'
+        ):
             raise ClientLoginError('Unable to login')
 
         if self.on_login:
@@ -478,7 +484,7 @@ class Client(object):
         info = self._make_request(self.GRAPHQL_API_URL, query=query)
 
         if not info.get('data', {}).get('user') or \
-                not info.get('data', {}).get('user', {}).get('edge_owner_to_timeline_media', {}).get('count', 0):
+                    not info.get('data', {}).get('user', {}).get('edge_owner_to_timeline_media', {}).get('count', 0):
             # non-existent accounts do not return media at all
             # private accounts return media with just a count, no nodes
             raise ClientError('Not Found', 404)
@@ -606,10 +612,7 @@ class Client(object):
         """
         end_cursor = kwargs.pop('end_cursor', None)
         # request 24 by default for the first page
-        if end_cursor:
-            count = kwargs.pop('count', 12)
-        else:
-            count = kwargs.pop('count', 24)
+        count = kwargs.pop('count', 12) if end_cursor else kwargs.pop('count', 24)
         if count > 50:
             raise ValueError('count cannot be greater than 50')
 
@@ -730,8 +733,7 @@ class Client(object):
         media_id = self._sanitise_media_id(media_id)
         endpoint = 'https://www.instagram.com/web/likes/{media_id!s}/like/'.format(**{'media_id': media_id})
         self._init_rollout_hash()
-        res = self._make_request(endpoint, params='')
-        return res
+        return self._make_request(endpoint, params='')
 
     @login_required
     def delete_like(self, media_id):
@@ -878,8 +880,8 @@ class Client(object):
         self._init_rollout_hash()
 
         upload_id = int(time.time() * 1000)
-        boundary = '----WebKitFormBoundary{}'.format(
-            ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(16)))
+        boundary = f"----WebKitFormBoundary{''.join(random.choice(string.ascii_letters + string.digits) for _ in range(16))}"
+
         fields = [
             ('upload_id', upload_id),
             ('media_type', 1),
@@ -914,7 +916,7 @@ class Client(object):
             self.logger.debug('RESPONSE: {0!s}'.format(response_content))
             upload_res = json.loads(response_content)
             if upload_res.get('status', '') != 'ok':
-                raise ClientError('Upload status: {}'.format(upload_res.get('status', '')))
+                raise ClientError(f"Upload status: {upload_res.get('status', '')}")
             upload_id = upload_res['upload_id']
 
             headers['Referer'] = 'https://www.instagram.com/create/details/'

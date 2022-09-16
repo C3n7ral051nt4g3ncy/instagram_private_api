@@ -113,8 +113,8 @@ class AccountTests(ApiTestBase):
         generated_uuid = Client.generate_uuid(True)
         query = {'challenge_type': 'signup', 'guid': generated_uuid}
         with compat_mock.patch('instagram_private_api.Client.generate_uuid') as generate_uuid_mock, \
-                compat_mock.patch('instagram_private_api.Client._call_api') as call_api, \
-                compat_mock.patch('instagram_private_api.Client._read_response') as read_response:
+                    compat_mock.patch('instagram_private_api.Client._call_api') as call_api, \
+                    compat_mock.patch('instagram_private_api.Client._read_response') as read_response:
             generate_uuid_mock.return_value = generated_uuid
             call_api.return_value = ''
             read_response.return_value = json.dumps({'status': 'ok', 'logged_in_user': {'pk': 123}})
@@ -143,8 +143,8 @@ class AccountTests(ApiTestBase):
     def test_login_failcsrf_mock(self, csrftoken):
         generated_uuid = Client.generate_uuid(True)
         with compat_mock.patch('instagram_private_api.Client.generate_uuid') as generate_uuid_mock, \
-                compat_mock.patch('instagram_private_api.Client._call_api') as call_api, \
-                compat_mock.patch('instagram_private_api.Client._read_response') as read_response:
+                    compat_mock.patch('instagram_private_api.Client._call_api') as call_api, \
+                    compat_mock.patch('instagram_private_api.Client._read_response') as read_response:
             generate_uuid_mock.return_value = generated_uuid
             call_api.return_value = ''
             read_response.return_value = ''
@@ -229,7 +229,7 @@ class AccountTests(ApiTestBase):
             'external_url': '',
             'email': 'john@example.com',
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.edit_profile(
             first_name=params['first_name'],
             biography=params['biography'],
@@ -346,11 +346,8 @@ class AccountTests(ApiTestBase):
                 self.api.api_url, 500, 'Internal Server Error', {},
                 BytesIO('Internal Server Error'.encode('utf-8')))
         ]
-        with compat_mock.patch('instagram_private_api.Client._read_response') as read_response, \
-                compat_mock.patch('instagram_private_api.Client.default_headers') as default_headers, \
-                compat_mock.patch('instagram_private_api.endpoints.accounts.compat_urllib_request.Request') \
-                as request, \
-                compat_mock.patch('instagram_private_api.http.random.choice') as randchoice_mock:
+        with compat_mock.patch('instagram_private_api.Client._read_response') as read_response, compat_mock.patch('instagram_private_api.Client.default_headers') as default_headers, compat_mock.patch('instagram_private_api.endpoints.accounts.compat_urllib_request.Request') \
+                        as request, compat_mock.patch('instagram_private_api.http.random.choice') as randchoice_mock:
             default_headers.return_value = {'Header': 'X'}
             randchoice_mock.return_value = 'x'
             read_response.return_value = json.dumps(
@@ -360,23 +357,23 @@ class AccountTests(ApiTestBase):
             photo_data = '...'.encode('ascii')
             json_params = json.dumps(self.api.authenticated_params)
             hash_sig = self.api._generate_signature(json_params)
-            signed_body = hash_sig + '.' + json_params
+            signed_body = f'{hash_sig}.{json_params}'
             headers = self.api.default_headers
             headers.update({
                 'Content-Type': 'multipart/form-data; boundary={0!s}'.format(self.api.uuid),
                 'Content-Length': len(photo_data)
             })
             body = '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="ig_sig_key_version"\r\n\r\n' \
-                   '%(sig_version)s\r\n' \
-                   '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="signed_body"\r\n\r\n' \
-                   '%(signed_body)s\r\n' \
-                   '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="profile_pic"; filename="profile_pic"\r\n' \
-                   'Content-Type: application/octet-stream\r\n' \
-                   'Content-Transfer-Encoding: binary\r\n\r\n...\r\n' \
-                   '--%(boundary)s--\r\n' % {
+                       'Content-Disposition: form-data; name="ig_sig_key_version"\r\n\r\n' \
+                       '%(sig_version)s\r\n' \
+                       '--%(boundary)s\r\n' \
+                       'Content-Disposition: form-data; name="signed_body"\r\n\r\n' \
+                       '%(signed_body)s\r\n' \
+                       '--%(boundary)s\r\n' \
+                       'Content-Disposition: form-data; name="profile_pic"; filename="profile_pic"\r\n' \
+                       'Content-Type: application/octet-stream\r\n' \
+                       'Content-Transfer-Encoding: binary\r\n\r\n...\r\n' \
+                       '--%(boundary)s--\r\n' % {
                        'boundary': 'x' * 30,
                        'signed_body': signed_body,
                        'sig_version': self.api.key_version

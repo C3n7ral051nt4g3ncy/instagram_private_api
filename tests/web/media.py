@@ -144,7 +144,7 @@ class MediaTests(WebApiTestBase):
     @compat_mock.patch('instagram_web_api.Client._make_request')
     def test_post_comment_mock(self, make_request):
         make_request.return_value = {'status': 'ok', 'id': '12345678'}
-        self.api.post_comment(self.test_media_id + '_12345', '<3')      # test sanitise media id
+        self.api.post_comment(f'{self.test_media_id}_12345', '<3')
         make_request.assert_called_with(
             'https://www.instagram.com/web/comments/{media_id!s}/add/'.format(
                 **{'media_id': self.test_media_id}),

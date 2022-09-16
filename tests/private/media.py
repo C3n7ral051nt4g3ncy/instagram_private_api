@@ -185,8 +185,7 @@ class MediaTests(ApiTestBase):
         results = self.api.media_info(self.test_media_id)
         self.assertEqual(results.get('status'), 'ok')
         self.assertEqual(results.get('items', [])[0].get('id'), self.test_media_id)
-        video_versions = results.get('items', [])[0].get('video_versions')
-        if video_versions:
+        if video_versions := results.get('items', [])[0].get('video_versions'):
             videos = sorted(video_versions, key=lambda m: m['width'], reverse=True)
             self.assertGreaterEqual(videos[0]['width'], 640, 'High res video not retrieved.')
 
@@ -257,7 +256,7 @@ class MediaTests(ApiTestBase):
         media_id = '123_123'
         caption = 'Hello'
         params = {'caption_text': caption}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.edit_media(media_id, 'Hello')
         call_api.assert_called_with(
             'media/{media_id!s}/edit_media/'.format(**{'media_id': media_id}),
@@ -275,7 +274,7 @@ class MediaTests(ApiTestBase):
         call_api.return_value = {'status': 'ok'}
         media_id = '123_123'
         params = {'media_id': media_id}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.delete_media(media_id)
         call_api.assert_called_with(
             'media/{media_id!s}/delete/'.format(**{'media_id': media_id}),
@@ -292,9 +291,8 @@ class MediaTests(ApiTestBase):
         breadcrumb = gen_user_breadcrumb(len(comment_text))
         generated_uuid = self.api.generate_uuid()
         with compat_mock.patch('instagram_private_api.endpoints.media.gen_user_breadcrumb') \
-                as gen_user_breadcrumb_mock, \
-                compat_mock.patch('instagram_private_api.Client.generate_uuid')\
-                as generate_uuid_mock:
+                        as gen_user_breadcrumb_mock, compat_mock.patch('instagram_private_api.Client.generate_uuid')\
+                        as generate_uuid_mock:
             gen_user_breadcrumb_mock.return_value = breadcrumb
             generate_uuid_mock.return_value = generated_uuid
             params = {
@@ -304,7 +302,7 @@ class MediaTests(ApiTestBase):
                 'containermodule': 'comments_feed_timeline',
                 'radio_type': self.api.radio_type,
             }
-            params.update(self.api.authenticated_params)
+            params |= self.api.authenticated_params
             self.api.post_comment(media_id, comment_text)
             call_api.assert_called_with(
                 'media/{media_id!s}/comment/'.format(**{'media_id': media_id}),
@@ -355,7 +353,7 @@ class MediaTests(ApiTestBase):
             'module_name': 'x',
             'radio_type': self.api.radio_type,
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.post_like(media_id, params['module_name'])
         call_api.assert_called_with(
             'media/{media_id!s}/like/'.format(**{'media_id': media_id}),
@@ -376,7 +374,7 @@ class MediaTests(ApiTestBase):
             'module_name': 'x',
             'radio_type': self.api.radio_type,
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.delete_like(media_id, params['module_name'])
         call_api.assert_called_with(
             'media/{media_id!s}/unlike/'.format(**{'media_id': media_id}),
@@ -428,7 +426,7 @@ class MediaTests(ApiTestBase):
             'radio_type': self.api.radio_type,
             'added_collection_ids': json.dumps(added_collection_ids, separators=(',', ':'))
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.save_photo(self.test_media_id, added_collection_ids=added_collection_ids)
         call_api.assert_called_with(
             'media/{media_id!s}/save/'.format(**{'media_id': self.test_media_id}),
@@ -447,7 +445,7 @@ class MediaTests(ApiTestBase):
             'radio_type': self.api.radio_type,
             'removed_collection_ids': json.dumps(removed_collection_ids, separators=(',', ':'))
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.unsave_photo(self.test_media_id, removed_collection_ids=removed_collection_ids)
         call_api.assert_called_with(
             'media/{media_id!s}/unsave/'.format(**{'media_id': self.test_media_id}),
@@ -494,7 +492,7 @@ class MediaTests(ApiTestBase):
                 '1309764653429046112_124317_124317': ['1470356135_1470372049'],
                 '1309209597843679372_124317_124317': ['1470289967_1470372013']},
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.media_seen(params['reels'])
         call_api.assert_called_with(
             'media/seen/', params=params, version='v2')
@@ -504,21 +502,26 @@ class MediaTests(ApiTestBase):
         call_api.return_value = {'status': 'ok'}
         ts_now = 1493789777
 
-        with compat_mock.patch('instagram_private_api.endpoints.media.randint') as randint_mock, \
-                compat_mock.patch('instagram_private_api.endpoints.media.time.time') as time_mock:
+        with compat_mock.patch('instagram_private_api.endpoints.media.randint') as randint_mock, compat_mock.patch('instagram_private_api.endpoints.media.time.time') as time_mock:
 
             time_mock.return_value = ts_now
             randint_mock.return_value = 0
             params = {
                 'reels': {
-                    '1309764653429046112_124317_124317': ['1470356135_{0!s}'.format((int(ts_now) - 1))],
-                    '1309209597843679372_124317_124317': ['1470289967_{0!s}'.format((int(ts_now) - 2))]},
+                    '1309764653429046112_124317_124317': [
+                        '1470356135_{0!s}'.format(ts_now - 1)
+                    ],
+                    '1309209597843679372_124317_124317': [
+                        '1470289967_{0!s}'.format(ts_now - 2)
+                    ],
+                }
             }
+
             reels_params = [
                 {'id': '1309764653429046112_124317', 'taken_at': 1470356135, 'user': {'pk': 124317}},
                 {'id': '1309209597843679372_124317', 'taken_at': 1470289967, 'user': {'pk': 124317}}
             ]
-            params.update(self.api.authenticated_params)
+            params |= self.api.authenticated_params
             self.api.media_seen(reels_params)
             call_api.assert_called_with(
                 'media/seen/', params=params, version='v2')
@@ -531,7 +534,7 @@ class MediaTests(ApiTestBase):
         params = {
             'comment_ids_to_delete': ','.join(comment_ids)
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.bulk_delete_comments(media_id, comment_ids)
         call_api.assert_called_with(
             'media/{media_id!s}/comment/bulk_delete/'.format(**{'media_id': media_id}),
@@ -558,7 +561,7 @@ class MediaTests(ApiTestBase):
         params = {
             'media_id': media_id
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.media_only_me(media_id, 2)
         call_api.assert_called_with(
             'media/{media_id!s}/only_me/'.format(**{'media_id': media_id}),

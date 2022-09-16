@@ -26,7 +26,9 @@ class ClientCompatPatch(object):
                 **{'crop': crop, 'size': size})
             return re.sub(r'(?P<eparam>/e[0-9]+/)', replacement_expr, url)
         replacement_expr = '/{crop!s}{size!s}x{size!s}/'.format(
-            **{'crop': mobj.group('crop') or crop, 'size': size})
+            **{'crop': mobj['crop'] or crop, 'size': size}
+        )
+
         return re.sub(cls.IG_IMAGE_URL_EXPR, replacement_expr, url)
 
     @staticmethod
@@ -56,15 +58,17 @@ class ClientCompatPatch(object):
             # no caption - edge_media_to_caption: { edges: [] }
             caption = None
 
-        if not caption:
-            media['caption'] = None
-        else:
-            media['caption'] = {
+        media['caption'] = (
+            {
                 'text': caption,
                 'from': media['owner'],
                 # generate a psuedo 12-char ID
-                'id': str(abs(hash(caption + media_shortcode)) % (10 ** 12)),
+                'id': str(abs(hash(caption + media_shortcode)) % (10**12)),
             }
+            if caption
+            else None
+        )
+
         media['tags'] = []
         media['filter'] = ''
         media['attribution'] = None
@@ -121,18 +125,23 @@ class ClientCompatPatch(object):
         media['created_time'] = str(
             media.get('date', '') or media.get('taken_at_timestamp', ''))
 
-        usertags = (
-            media.get('usertags', {}).get('nodes', []) or
-            [ut['node'] for ut in media.get('edge_media_to_tagged_user', {}).get('edges', [])])
-        if not usertags:
-            media['users_in_photo'] = []
-        else:
+        if usertags := (
+            media.get('usertags', {}).get('nodes', [])
+            or [
+                ut['node']
+                for ut in media.get('edge_media_to_tagged_user', {}).get(
+                    'edges', []
+                )
+            ]
+        ):
             users_in_photo = [{
                 'position': {'y': ut['y'], 'x': ut['x']},
                 'user': ut['user']
             } for ut in usertags]
             media['users_in_photo'] = users_in_photo
 
+        else:
+            media['users_in_photo'] = []
         # Try to make carousel_media for app api compat
         if media.get('edge_sidecar_to_children', {}).get('edges', []):
             carousel_media = []

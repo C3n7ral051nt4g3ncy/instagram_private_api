@@ -15,7 +15,7 @@ def raise_if_invalid_rank_token(val, required=True):
     if required and not val:
         raise ValueError('rank_token is required')
     if not re.match(VALID_UUID_RE, val):
-        raise ValueError('Invalid rank_token: {}'.format(val))
+        raise ValueError(f'Invalid rank_token: {val}')
 
 
 def gen_user_breadcrumb(size):
@@ -165,7 +165,6 @@ def ig_chunk_generator(file_data, max_chunk_size=(500 * 1024)):
         if not chunks_generated or total_len <= first_chunk_size:
             # first chunk
             chunk = Chunk(0, 0, min(first_chunk_size, total_len), 0)
-            chunks_generated.append(chunk.length)
         else:
             chunk_elapsed_time = datetime.now() - last_yield_dt
             try:
@@ -178,8 +177,7 @@ def ig_chunk_generator(file_data, max_chunk_size=(500 * 1024)):
             chunk = Chunk(
                 len(chunks_generated), sum(chunks_generated), chunk_end,
                 0 if chunk_end < total_len else len(chunks_generated) + 1)
-            chunks_generated.append(chunk.length)
-
+        chunks_generated.append(chunk.length)
         last_yield_dt = datetime.now()
         if is_fp:
             file_data.seek(chunk.start, os.SEEK_SET)
@@ -214,13 +212,10 @@ class InstagramID(object):
         """Covert a shortcode to a numeric value."""
         base = len(alphabet)
         strlen = len(shortcode)
-        num = 0
-        idx = 0
-        for char in shortcode:
-            power = (strlen - (idx + 1))
-            num += alphabet.index(char) * (base ** power)
-            idx += 1
-        return num
+        return sum(
+            alphabet.index(char) * base ** ((strlen - (idx + 1)))
+            for idx, char in enumerate(shortcode)
+        )
 
     @classmethod
     def weblink_from_media_id(cls, media_id):

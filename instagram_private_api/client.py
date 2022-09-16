@@ -123,9 +123,9 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
             kwargs.pop('application_id', None) or user_settings.get('application_id') or
             self.APPLICATION_ID)
 
-        # to maintain backward compat for user_agent kwarg
-        custom_ua = kwargs.pop('user_agent', '') or user_settings.get('user_agent')
-        if custom_ua:
+        if custom_ua := kwargs.pop('user_agent', '') or user_settings.get(
+            'user_agent'
+        ):
             self.user_agent = custom_ua
         else:
             self.app_version = (
@@ -167,15 +167,13 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
 
         proxy_handler = kwargs.pop('proxy_handler', None)
         if not proxy_handler:
-            proxy = kwargs.pop('proxy', None)
-            if proxy:
+            if proxy := kwargs.pop('proxy', None):
                 warnings.warn('Proxy support is alpha.', UserWarning)
                 parsed_url = compat_urllib_parse_urlparse(proxy)
-                if parsed_url.netloc and parsed_url.scheme:
-                    proxy_address = '{0!s}://{1!s}'.format(parsed_url.scheme, parsed_url.netloc)
-                    proxy_handler = compat_urllib_request.ProxyHandler({'https': proxy_address})
-                else:
+                if not parsed_url.netloc or not parsed_url.scheme:
                     raise ValueError('Invalid proxy argument: {0!s}'.format(proxy))
+                proxy_address = '{0!s}://{1!s}'.format(parsed_url.scheme, parsed_url.netloc)
+                proxy_handler = compat_urllib_request.ProxyHandler({'https': proxy_address})
         handlers = []
         if proxy_handler:
             handlers.append(proxy_handler)
@@ -245,16 +243,16 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
         if not mobj:
             raise ValueError('User-agent specified does not fit format required: {0!s}'.format(
                 Constants.USER_AGENT_EXPRESSION))
-        self.app_version = mobj.group('app_version')
-        self.android_release = mobj.group('android_release')
-        self.android_version = int(mobj.group('android_version'))
-        self.phone_manufacturer = mobj.group('manufacturer')
-        self.phone_device = mobj.group('device')
-        self.phone_model = mobj.group('model')
-        self.phone_dpi = mobj.group('dpi')
-        self.phone_resolution = mobj.group('resolution')
-        self.phone_chipset = mobj.group('chipset')
-        self.version_code = mobj.group('version_code')
+        self.app_version = mobj['app_version']
+        self.android_release = mobj['android_release']
+        self.android_version = int(mobj['android_version'])
+        self.phone_manufacturer = mobj['manufacturer']
+        self.phone_device = mobj['device']
+        self.phone_model = mobj['model']
+        self.phone_dpi = mobj['dpi']
+        self.phone_resolution = mobj['resolution']
+        self.phone_chipset = mobj['chipset']
+        self.version_code = mobj['version_code']
 
     @staticmethod
     def generate_useragent(**kwargs):
@@ -299,17 +297,18 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
                 'User-agent specified does not fit format required: {0!s}'.format(
                     Constants.USER_AGENT_EXPRESSION))
         parse_params = {
-            'app_version': mobj.group('app_version'),
-            'android_version': int(mobj.group('android_version')),
-            'android_release': mobj.group('android_release'),
-            'brand': mobj.group('manufacturer'),
-            'device': mobj.group('device'),
-            'model': mobj.group('model'),
-            'dpi': mobj.group('dpi'),
-            'resolution': mobj.group('resolution'),
-            'chipset': mobj.group('chipset'),
-            'version_code': mobj.group('version_code'),
+            'app_version': mobj['app_version'],
+            'android_version': int(mobj['android_version']),
+            'android_release': mobj['android_release'],
+            'brand': mobj['manufacturer'],
+            'device': mobj['device'],
+            'model': mobj['model'],
+            'dpi': mobj['dpi'],
+            'resolution': mobj['resolution'],
+            'chipset': mobj['chipset'],
+            'version_code': mobj['version_code'],
         }
+
         return {
             'user_agent': Constants.USER_AGENT_FORMAT.format(**parse_params),
             'parsed_params': parse_params
@@ -371,9 +370,11 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
 
     @property
     def rank_token(self):
-        if not self.authenticated_user_id:
-            return None
-        return '{0!s}_{1!s}'.format(self.authenticated_user_id, self.uuid)
+        return (
+            '{0!s}_{1!s}'.format(self.authenticated_user_id, self.uuid)
+            if self.authenticated_user_id
+            else None
+        )
 
     @property
     def authenticated_params(self):
@@ -437,9 +438,7 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
             new_uuid = uuid.UUID(m.hexdigest())
         else:
             new_uuid = uuid.uuid1()
-        if return_hex:
-            return new_uuid.hex
-        return str(new_uuid)
+        return new_uuid.hex if return_hex else str(new_uuid)
 
     @classmethod
     def generate_deviceid(cls, seed=None):
@@ -474,12 +473,10 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
         :param response:
         :return:
         """
-        if response.info().get('Content-Encoding') == 'gzip':
-            buf = BytesIO(response.read())
-            res = gzip.GzipFile(fileobj=buf).read().decode('utf8')
-        else:
-            res = response.read().decode('utf8')
-        return res
+        if response.info().get('Content-Encoding') != 'gzip':
+            return response.read().decode('utf8')
+        buf = BytesIO(response.read())
+        return gzip.GzipFile(fileobj=buf).read().decode('utf8')
 
     def _call_api(self, endpoint, params=None, query=None, return_response=False, unsigned=False, version='v1'):
         """
@@ -509,8 +506,9 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
                     hash_sig = self._generate_signature(json_params)
                     post_params = {
                         'ig_sig_key_version': self.key_version,
-                        'signed_body': hash_sig + '.' + json_params
+                        'signed_body': f'{hash_sig}.{json_params}',
                     }
+
                 else:
                     # direct form post
                     post_params = params
@@ -530,8 +528,10 @@ class Client(AccountsEndpointsMixin, DiscoverEndpointsMixin, FeedEndpointsMixin,
                 compat_urllib_error.URLError,   # URLError is base of HTTPError
                 compat_http_client.HTTPException,
                 ConnectionError) as connection_error:
-            raise ClientConnectionError('{} {}'.format(
-                connection_error.__class__.__name__, str(connection_error)))
+            raise ClientConnectionError(
+                f'{connection_error.__class__.__name__} {str(connection_error)}'
+            )
+
 
         if return_response:
             return response

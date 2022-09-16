@@ -35,8 +35,8 @@ class FriendshipsEndpointsMixin(object):
         endpoint = 'friendships/{user_id!s}/following/'.format(**{'user_id': user_id})
         query_params = {
             'rank_token': rank_token,
-        }
-        query_params.update(kwargs)
+        } | kwargs
+
         res = self._call_api(endpoint, query=query_params)
         if self.auto_patch:
             [ClientCompatPatch.list_user(u, drop_incompat_keys=self.drop_incompat_keys)
@@ -60,8 +60,8 @@ class FriendshipsEndpointsMixin(object):
         endpoint = 'friendships/{user_id!s}/followers/'.format(**{'user_id': user_id})
         query_params = {
             'rank_token': rank_token,
-        }
-        query_params.update(kwargs)
+        } | kwargs
+
         res = self._call_api(endpoint, query=query_params)
         if self.auto_patch:
             [ClientCompatPatch.list_user(u, drop_incompat_keys=self.drop_incompat_keys)
@@ -97,8 +97,7 @@ class FriendshipsEndpointsMixin(object):
                 }
         """
         endpoint = 'friendships/show/{user_id!s}/'.format(**{'user_id': user_id})
-        res = self._call_api(endpoint)
-        return res
+        return self._call_api(endpoint)
 
     def friendships_show_many(self, user_ids):
         """
@@ -128,8 +127,7 @@ class FriendshipsEndpointsMixin(object):
             '_csrftoken': self.csrftoken,
             'user_ids': ','.join(user_ids)
         }
-        res = self._call_api('friendships/show_many/', params=params, unsigned=True)
-        return res
+        return self._call_api('friendships/show_many/', params=params, unsigned=True)
 
     def friendships_create(self, user_id):
         """
@@ -153,9 +151,8 @@ class FriendshipsEndpointsMixin(object):
         """
         endpoint = 'friendships/create/{user_id!s}/'.format(**{'user_id': user_id})
         params = {'user_id': user_id, 'radio_type': self.radio_type}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def friendships_destroy(self, user_id, **kwargs):
         """
@@ -180,9 +177,8 @@ class FriendshipsEndpointsMixin(object):
         """
         endpoint = 'friendships/destroy/{user_id!s}/'.format(**{'user_id': user_id})
         params = {'user_id': user_id, 'radio_type': self.radio_type}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def friendships_block(self, user_id):
         """
@@ -206,9 +202,8 @@ class FriendshipsEndpointsMixin(object):
         """
         endpoint = 'friendships/block/{user_id!s}/'.format(**{'user_id': user_id})
         params = {'user_id': user_id}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def friendships_unblock(self, user_id):
         """
@@ -232,9 +227,8 @@ class FriendshipsEndpointsMixin(object):
         """
         endpoint = 'friendships/unblock/{user_id!s}/'.format(**{'user_id': user_id})
         params = {'user_id': user_id}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def block_friend_reel(self, user_id):
         """
@@ -258,9 +252,8 @@ class FriendshipsEndpointsMixin(object):
         """
         endpoint = 'friendships/block_friend_reel/{user_id!s}/'.format(**{'user_id': user_id})
         params = {'source': 'main_feed'}
-        params.update(self.authenticated_params)
-        res = self._call_api(endpoint, params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(endpoint, params=params)
 
     def unblock_friend_reel(self, user_id):
         """
@@ -283,8 +276,7 @@ class FriendshipsEndpointsMixin(object):
                 }
         """
         endpoint = 'friendships/unblock_friend_reel/{user_id!s}/'.format(**{'user_id': user_id})
-        res = self._call_api(endpoint, params=self.authenticated_params)
-        return res
+        return self._call_api(endpoint, params=self.authenticated_params)
 
     def set_reel_block_status(self, user_ids, block_status='block'):
         """
@@ -322,12 +314,9 @@ class FriendshipsEndpointsMixin(object):
             raise ValueError('Invalid block_status: {0!s}'.format(block_status))
         if not isinstance(user_ids, list):
             user_ids = [user_ids]
-        params = {'source': 'settings'}
-        user_block_statuses = {}
-        for user_id in user_ids:
-            user_block_statuses[str(user_id)] = block_status
-        params['user_block_statuses'] = user_block_statuses
-        params.update(self.authenticated_params)
+        user_block_statuses = {str(user_id): block_status for user_id in user_ids}
+        params = {'source': 'settings', 'user_block_statuses': user_block_statuses}
+        params |= self.authenticated_params
         return self._call_api('friendships/set_reel_block_status/', params=params)
 
     def blocked_reels(self):
@@ -348,10 +337,10 @@ class FriendshipsEndpointsMixin(object):
         :param user_id:
         :return:
         """
-        res = self._call_api(
+        return self._call_api(
             'friendships/favorite/{user_id!s}/'.format(**{'user_id': user_id}),
-            params=self.authenticated_params)
-        return res
+            params=self.authenticated_params,
+        )
 
     def disable_post_notifications(self, user_id):
         """
@@ -360,10 +349,10 @@ class FriendshipsEndpointsMixin(object):
         :param user_id:
         :return:
         """
-        res = self._call_api(
+        return self._call_api(
             'friendships/unfavorite/{user_id!s}/'.format(**{'user_id': user_id}),
-            params=self.authenticated_params)
-        return res
+            params=self.authenticated_params,
+        )
 
     def ignore_user(self, user_id):
         """
@@ -373,11 +362,11 @@ class FriendshipsEndpointsMixin(object):
         :return:
         """
         params = {'user_id': user_id, 'radio_type': self.radio_type}
-        params.update(self.authenticated_params)
-        res = self._call_api(
+        params |= self.authenticated_params
+        return self._call_api(
             'friendships/ignore/{user_id!s}/'.format(**{'user_id': user_id}),
-            params=params)
-        return res
+            params=params,
+        )
 
     def remove_follower(self, user_id):
         """
@@ -387,8 +376,10 @@ class FriendshipsEndpointsMixin(object):
         :return:
         """
         params = {'user_id': user_id, 'radio_type': self.radio_type}
-        params.update(self.authenticated_params)
-        res = self._call_api(
-            'friendships/remove_follower/{user_id!s}/'.format(**{'user_id': user_id}),
-            params=params)
-        return res
+        params |= self.authenticated_params
+        return self._call_api(
+            'friendships/remove_follower/{user_id!s}/'.format(
+                **{'user_id': user_id}
+            ),
+            params=params,
+        )

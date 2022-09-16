@@ -41,12 +41,8 @@ class UploadTests(WebApiTestBase):
         ts_now = time.time()
         make_request.return_value = {'status': 'ok', 'upload_id': '123456789'}
         with compat_mock.patch(
-                'instagram_web_api.client.compat_urllib_request.OpenerDirector.open') as opener, \
-                compat_mock.patch('instagram_web_api.client.time.time') as time_mock, \
-                compat_mock.patch('instagram_web_api.client.random.choice') as rand_choice, \
-                compat_mock.patch('instagram_web_api.Client._read_response') as read_response, \
-                compat_mock.patch(
-                    'instagram_web_api.client.compat_urllib_request.Request') as request:
+                    'instagram_web_api.client.compat_urllib_request.OpenerDirector.open') as opener, compat_mock.patch('instagram_web_api.client.time.time') as time_mock, compat_mock.patch('instagram_web_api.client.random.choice') as rand_choice, compat_mock.patch('instagram_web_api.Client._read_response') as read_response, compat_mock.patch(
+                        'instagram_web_api.client.compat_urllib_request.Request') as request:
             opener.return_value = MockResponse()
             time_mock.return_value = ts_now
             rand_choice.return_value = 'x'
@@ -70,18 +66,22 @@ class UploadTests(WebApiTestBase):
                 'Connection': 'close',
                 'Content-Type': 'application/x-www-form-urlencoded'}
 
-            body = '--{boundary}\r\n' \
-                   'Content-Disposition: form-data; name="upload_id"\r\n\r\n' \
-                   '{upload_id}\r\n' \
-                   '--{boundary}\r\n' \
-                   'Content-Disposition: form-data; name="media_type"\r\n\r\n1\r\n' \
-                   '--{boundary}\r\n' \
-                   'Content-Disposition: form-data; name="photo"; filename="photo.jpg"\r\n' \
-                   'Content-Type: application/octet-stream\r\n' \
-                   'Content-Transfer-Encoding: binary\r\n\r\n...\r\n' \
-                   '--{boundary}--\r\n'.format(
-                       boundary='----WebKitFormBoundary{}'.format('x' * 16),
-                       upload_id=int(ts_now * 1000))
+            body = (
+                '--{boundary}\r\n'
+                'Content-Disposition: form-data; name="upload_id"\r\n\r\n'
+                '{upload_id}\r\n'
+                '--{boundary}\r\n'
+                'Content-Disposition: form-data; name="media_type"\r\n\r\n1\r\n'
+                '--{boundary}\r\n'
+                'Content-Disposition: form-data; name="photo"; filename="photo.jpg"\r\n'
+                'Content-Type: application/octet-stream\r\n'
+                'Content-Transfer-Encoding: binary\r\n\r\n...\r\n'
+                '--{boundary}--\r\n'.format(
+                    boundary=f"----WebKitFormBoundary{'x' * 16}",
+                    upload_id=int(ts_now * 1000),
+                )
+            )
+
             request.assert_called_with(
                 'https://www.instagram.com/create/upload/photo/',
                 body.encode('utf-8'), headers=headers)

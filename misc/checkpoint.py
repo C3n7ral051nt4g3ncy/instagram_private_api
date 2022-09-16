@@ -25,8 +25,8 @@ class Checkpoint:
         self.csrftoken = ''
         self.cookie = ''
         self.endpoint = 'https://i.instagram.com/integrity/checkpoint/' \
-                        'checkpoint_logged_out_main/%(user_id)s/?%(params)s' % \
-                        {
+                            'checkpoint_logged_out_main/%(user_id)s/?%(params)s' % \
+                            {
                             'user_id': self.user_id,
                             'params': urlencode({'next': 'instagram://checkpoint/dismiss'})
                         }
@@ -47,15 +47,16 @@ class Checkpoint:
         if not csrf_mobj:
             raise Exception('Unable to retrieve csrf token.')
 
-        csrf = csrf_mobj.group('csrf')
+        csrf = csrf_mobj['csrf']
         self.csrftoken = csrf
 
         cookie_val = res.info().get('set-cookie') or ''
         cookie = ''
         for c in ['sessionid', 'checkpoint_step', 'mid', 'csrftoken']:
-            cookie_mobj = re.search(r'{0!s}=(?P<val>[^;]+?);'.format(c), cookie_val)
-            if cookie_mobj:
-                cookie += '{0!s}={1!s}; '.format(c, unquote_plus(cookie_mobj.group('val')))
+            if cookie_mobj := re.search(
+                r'{0!s}=(?P<val>[^;]+?);'.format(c), cookie_val
+            ):
+                cookie += '{0!s}={1!s}; '.format(c, unquote_plus(cookie_mobj['val']))
 
         self.cookie = cookie
         data = {'csrfmiddlewaretoken': csrf, 'email': 'Verify by Email'}    # 'sms': 'Verify by SMS'
@@ -74,10 +75,7 @@ class Checkpoint:
         else:
             content = res.read().decode('utf-8')
 
-        if 'id_response_code' in content:
-            return True
-
-        return False
+        return 'id_response_code' in content
 
     def respond_to_checkpoint(self, response_code):
         headers = {

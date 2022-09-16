@@ -84,7 +84,7 @@ class LiveTests(ApiTestBase):
 
         like_count = 2
         params = {'user_like_count': str(like_count)}
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
         self.api.broadcast_like(broadcast_id, like_count)
         call_api.assert_called_with(
             'live/{broadcast_id!s}/like/'.format(**{'broadcast_id': broadcast_id}),
@@ -146,9 +146,8 @@ class LiveTests(ApiTestBase):
         breadcrumb = gen_user_breadcrumb(len(comment_text))
         generated_uuid = self.api.generate_uuid()
         with compat_mock.patch('instagram_private_api.endpoints.live.gen_user_breadcrumb') \
-                as gen_user_breadcrumb_mock, \
-                compat_mock.patch('instagram_private_api.Client.generate_uuid') \
-                as generate_uuid_mock:
+                        as gen_user_breadcrumb_mock, compat_mock.patch('instagram_private_api.Client.generate_uuid') \
+                        as generate_uuid_mock:
             gen_user_breadcrumb_mock.return_value = breadcrumb
             generate_uuid_mock.return_value = generated_uuid
             params = {
@@ -158,7 +157,7 @@ class LiveTests(ApiTestBase):
                 'user_breadcrumb': breadcrumb,
                 'idempotence_token': generated_uuid,
             }
-            params.update(self.api.authenticated_params)
+            params |= self.api.authenticated_params
             self.api.broadcast_comment(broadcast_id, comment_text)
             call_api.assert_called_with(
                 'live/{broadcast_id!s}/comment/'.format(**{'broadcast_id': broadcast_id}),

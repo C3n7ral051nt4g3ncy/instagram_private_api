@@ -40,8 +40,8 @@ class FeedEndpointsMixin(object):
             'is_pull_to_refresh': '0',
             'phone_id': self.phone_id,
             'timezone_offset': self.timezone_offset,
-        }
-        params.update(kwargs)
+        } | kwargs
+
         res = self._call_api('feed/timeline/', params=params, unsigned=True)
         if self.auto_patch:
             [ClientCompatPatch.media(m['media_or_ad'], drop_incompat_keys=self.drop_incompat_keys)
@@ -49,7 +49,7 @@ class FeedEndpointsMixin(object):
              for m in res.get('feed_items', [])]
         return res
 
-    def feed_popular(self, **kwargs):   # pragma: no cover
+    def feed_popular(self, **kwargs):    # pragma: no cover
         """Get popular feed. This endpoint is believed to be obsolete. Do not use."""
         warnings.warn(
             'This endpoint is believed to be obsolete. Do not use.',
@@ -58,9 +58,9 @@ class FeedEndpointsMixin(object):
         query = {
             'people_teaser_supported': '1',
             'rank_token': self.rank_token,
-            'ranked_content': 'true'
-        }
-        query.update(kwargs)
+            'ranked_content': 'true',
+        } | kwargs
+
         res = self._call_api('feed/popular/', query=query)
         if self.auto_patch:
             [ClientCompatPatch.media(m, drop_incompat_keys=self.drop_incompat_keys)
@@ -141,9 +141,7 @@ class FeedEndpointsMixin(object):
         :return:
         """
         user_ids = [str(x) for x in user_ids]
-        params = {'user_ids': user_ids}
-        params.update(kwargs)
-
+        params = {'user_ids': user_ids} | kwargs
         res = self._call_api('feed/reels_media/', params=params)
         if self.auto_patch:
             for reel_media in res.get('reels_media', []):
@@ -167,10 +165,8 @@ class FeedEndpointsMixin(object):
         """
         raise_if_invalid_rank_token(rank_token)
 
-        query_params = {
-            'rank_token': rank_token
-        }
-        query_params.update(kwargs)
+        query_params = {'rank_token': rank_token} | kwargs
+
         endpoint = 'feed/tag/{tag!s}/'.format(
             **{'tag': compat_urllib_parse.quote(tag.encode('utf8'))})
         res = self._call_api(endpoint, query=query_params)
@@ -220,8 +216,8 @@ class FeedEndpointsMixin(object):
         endpoint = 'feed/location/{location_id!s}/'.format(**{'location_id': location_id})
         query_params = {
             'rank_token': rank_token,
-        }
-        query_params.update(kwargs)
+        } | kwargs
+
         res = self._call_api(endpoint, query=query_params)
         if self.auto_patch:
             if res.get('items'):

@@ -107,7 +107,7 @@ class AccountsEndpointsMixin(object):
             'external_url': external_url or '',
             'email': email,
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         res = self._call_api('accounts/edit_profile/', params=params)
         if self.auto_patch:
             ClientCompatPatch.user(res.get('user'))
@@ -133,8 +133,9 @@ class AccountsEndpointsMixin(object):
         hash_sig = self._generate_signature(json_params)
         fields = [
             ('ig_sig_key_version', self.key_version),
-            ('signed_body', hash_sig + '.' + json_params)
+            ('signed_body', f'{hash_sig}.{json_params}'),
         ]
+
         files = [
             ('profile_pic', 'profile_pic', 'application/octet-stream', photo_data)
         ]
@@ -157,8 +158,10 @@ class AccountsEndpointsMixin(object):
         except (SSLError, timeout, SocketError,
                 compat_urllib_error.URLError,   # URLError is base of HTTPError
                 compat_http_client.HTTPException) as connection_error:
-            raise ClientConnectionError('{} {}'.format(
-                connection_error.__class__.__name__, str(connection_error)))
+            raise ClientConnectionError(
+                f'{connection_error.__class__.__name__} {str(connection_error)}'
+            )
+
 
         post_response = self._read_response(response)
         self.logger.debug('RESPONSE: {0:d} {1!s}'.format(response.code, post_response))
@@ -199,8 +202,9 @@ class AccountsEndpointsMixin(object):
         json_params = json.dumps({}, separators=(',', ':'))
         query = {
             'ig_sig_key_version': self.key_version,
-            'signed_body': self._generate_signature(json_params) + '.' + json_params
+            'signed_body': f'{self._generate_signature(json_params)}.{json_params}',
         }
+
         return self._call_api('accounts/get_presence_disabled/', query=query)
 
     def set_presence_status(self, disabled):
@@ -212,7 +216,7 @@ class AccountsEndpointsMixin(object):
         params = {
             'disabled': '1' if disabled else '0'
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('accounts/set_presence_disabled/', params=params)
 
     def enable_presence_status(self):

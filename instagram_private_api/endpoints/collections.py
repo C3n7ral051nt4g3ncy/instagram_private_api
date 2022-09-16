@@ -58,7 +58,7 @@ class CollectionsEndpointsMixin(object):
             added_media_ids = [added_media_ids]
         if added_media_ids:
             params['added_media_ids'] = json.dumps(added_media_ids, separators=(',', ':'))
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('collections/create/', params=params)
 
     def edit_collection(self, collection_id, added_media_ids):
@@ -74,7 +74,7 @@ class CollectionsEndpointsMixin(object):
         params = {
             'added_media_ids': json.dumps(added_media_ids, separators=(',', ':'))
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         endpoint = 'collections/{collection_id!s}/edit/'.format(**{'collection_id': collection_id})
         return self._call_api(endpoint, params=params)
 

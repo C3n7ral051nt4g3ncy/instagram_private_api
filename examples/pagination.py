@@ -38,14 +38,11 @@ if __name__ == '__main__':
     results = api.user_feed(user_id)
     updates.extend(results.get('items', []))
 
-    next_max_id = results.get('next_max_id')
-    while next_max_id:
+    while next_max_id := results.get('next_max_id'):
         results = api.user_feed(user_id, max_id=next_max_id)
         updates.extend(results.get('items', []))
         if len(updates) >= 30:       # get only first 30 or so
             break
-        next_max_id = results.get('next_max_id')
-
     updates.sort(key=lambda x: x['pk'])
     # print list of IDs
     print(json.dumps([u['pk'] for u in updates], indent=2))

@@ -17,11 +17,11 @@ class IGTVEndpointsMixin(object):
         """
         if (channel_id not in ('for_you', 'chrono_following', 'popular', 'continue_watching')
                 and not re.match(USER_CHANNEL_ID_RE, channel_id)):
-            raise ValueError('Invalid channel_id: {}'.format(channel_id))
+            raise ValueError(f'Invalid channel_id: {channel_id}')
 
         endpoint = 'igtv/channel/'
         params = {'id': channel_id}
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         if kwargs:
             params.update(kwargs)
         res = self._call_api(endpoint, params=params)

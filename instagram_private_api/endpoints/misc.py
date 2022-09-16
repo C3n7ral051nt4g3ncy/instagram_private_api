@@ -20,7 +20,7 @@ class MiscEndpointsMixin(object):
                 'id': self.authenticated_user_id,
                 'experiments': Constants.EXPERIMENTS
             }
-            params.update(self.authenticated_params)
+            params |= self.authenticated_params
         return self._call_api('qe/sync/', params=params)
 
     def expose(self, experiment='ig_android_profile_contextual_feed'):  # pragma: no cover
@@ -32,7 +32,7 @@ class MiscEndpointsMixin(object):
             'id': self.authenticated_user_id,
             'experiment': experiment
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('qe/expose/', params=params)
 
     def megaphone_log(self, log_type='feed_aysf', action='seen', reason='', **kwargs):
@@ -52,20 +52,20 @@ class MiscEndpointsMixin(object):
             '_uuid': self.uuid,
             'device_id': self.device_id,
             '_csrftoken': self.csrftoken,
-            'uuid': self.generate_uuid(return_hex=True)
-        }
-        params.update(kwargs)
+            'uuid': self.generate_uuid(return_hex=True),
+        } | kwargs
+
         return self._call_api('megaphone/log/', params=params, unsigned=True)
 
     def ranked_recipients(self):
         """Get ranked recipients"""
-        res = self._call_api('direct_v2/ranked_recipients/', query={'show_threads': 'true'})
-        return res
+        return self._call_api(
+            'direct_v2/ranked_recipients/', query={'show_threads': 'true'}
+        )
 
     def recent_recipients(self):
         """Get recent recipients"""
-        res = self._call_api('direct_share/recent_recipients/')
-        return res
+        return self._call_api('direct_share/recent_recipients/')
 
     def news(self, **kwargs):
         """
@@ -94,10 +94,8 @@ class MiscEndpointsMixin(object):
         :param kwargs:
         :return:
         """
-        query = {'url': url}
-        query.update(kwargs)
-        res = self._call_api('oembed/', query=query)
-        return res
+        query = {'url': url} | kwargs
+        return self._call_api('oembed/', query=query)
 
     def translate(self, object_id, object_type):
         """
@@ -110,10 +108,9 @@ class MiscEndpointsMixin(object):
         :return:
         """
         warnings.warn('This endpoint is not tested fully.', UserWarning)
-        res = self._call_api(
-            'language/translate/',
-            query={'id': object_id, 'type': object_type})
-        return res
+        return self._call_api(
+            'language/translate/', query={'id': object_id, 'type': object_type}
+        )
 
     def bulk_translate(self, comment_ids):
         """
@@ -125,8 +122,7 @@ class MiscEndpointsMixin(object):
         if isinstance(comment_ids, str):
             comment_ids = [comment_ids]
         query = {'comment_ids': ','.join(comment_ids)}
-        res = self._call_api('language/bulk_translate/', query=query)
-        return res
+        return self._call_api('language/bulk_translate/', query=query)
 
     def top_search(self, query):
         """
@@ -155,7 +151,11 @@ class MiscEndpointsMixin(object):
         """
         if sticker_type not in ['static_stickers']:
             raise ValueError('Invalid sticker_type: {0!s}'.format(sticker_type))
-        if location and not ('lat' in location and 'lng' in location and 'horizontalAccuracy' in location):
+        if location and (
+            'lat' not in location
+            or 'lng' not in location
+            or 'horizontalAccuracy' not in location
+        ):
             raise ValueError('Invalid location')
         params = {
             'type': sticker_type
@@ -164,5 +164,5 @@ class MiscEndpointsMixin(object):
             params['lat'] = location['lat']
             params['lng'] = location['lng']
             params['horizontalAccuracy'] = location['horizontalAccuracy']
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('creatives/assets/', params=params)

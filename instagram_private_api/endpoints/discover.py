@@ -15,8 +15,7 @@ class DiscoverEndpointsMixin(object):
             - **max_id**: For pagination
         :return:
         """
-        query = {'is_prefetch': 'false', 'is_from_promote': 'false'}
-        query.update(kwargs)
+        query = {'is_prefetch': 'false', 'is_from_promote': 'false'} | kwargs
         res = self._call_api('discover/explore/', query=query)
         if self.auto_patch:
             [ClientCompatPatch.media(item['media'], drop_incompat_keys=self.drop_incompat_keys)
@@ -69,5 +68,5 @@ class DiscoverEndpointsMixin(object):
             broadcast_ids = [broadcast_ids]
         broadcast_ids = [str(x) for x in broadcast_ids]
         params = {'broadcast_ids': broadcast_ids}
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('discover/top_live_status/', params=params)

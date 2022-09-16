@@ -203,15 +203,8 @@ class UploadTests(ApiTestBase):
                              disable_comments=False, is_reel=False, is_sidecar=False, **kwargs):
         ts_now = time.time()
         with compat_mock.patch(
-                'instagram_private_api.endpoints.accounts.compat_urllib_request.OpenerDirector.open') as opener, \
-                compat_mock.patch('instagram_private_api.Client._read_response') as read_response, \
-                compat_mock.patch('instagram_private_api.Client.default_headers') as default_headers, \
-                compat_mock.patch(
-                    'instagram_private_api.endpoints.accounts.compat_urllib_request.Request') as request, \
-                compat_mock.patch('instagram_private_api.Client._call_api') as call_api, \
-                compat_mock.patch('instagram_private_api.endpoints.upload.time.time') as time_mock, \
-                compat_mock.patch('instagram_private_api.endpoints.upload.randint') as randint_mock, \
-                compat_mock.patch('instagram_private_api.http.random.choice') as randchoice_mock:
+                    'instagram_private_api.endpoints.accounts.compat_urllib_request.OpenerDirector.open') as opener, compat_mock.patch('instagram_private_api.Client._read_response') as read_response, compat_mock.patch('instagram_private_api.Client.default_headers') as default_headers, compat_mock.patch(
+                        'instagram_private_api.endpoints.accounts.compat_urllib_request.Request') as request, compat_mock.patch('instagram_private_api.Client._call_api') as call_api, compat_mock.patch('instagram_private_api.endpoints.upload.time.time') as time_mock, compat_mock.patch('instagram_private_api.endpoints.upload.randint') as randint_mock, compat_mock.patch('instagram_private_api.http.random.choice') as randchoice_mock:
             time_mock.return_value = ts_now
             randint_mock.return_value = 0
             randchoice_mock.return_value = 'x'
@@ -248,48 +241,47 @@ class UploadTests(ApiTestBase):
             sidecar_fields = ''
             if is_sidecar:
                 sidecar_fields = 'Content-Disposition: form-data; name="is_sidecar"\r\n\r\n' \
-                                 '1\r\n' \
-                                 '--%(boundary)s\r\n' % {'boundary': 'x' * 30}
+                                     '1\r\n' \
+                                     '--%(boundary)s\r\n' % {'boundary': 'x' * 30}
 
             body = '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="upload_id"\r\n\r\n' \
-                   '%(upload_id)s\r\n' \
-                   '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="_uuid"\r\n\r\n' \
-                   '%(uuid)s\r\n' \
-                   '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="_csrftoken"\r\n\r\n' \
-                   '%(csrftoken)s\r\n' \
-                   '--%(boundary)s\r\n' \
-                   'Content-Disposition: form-data; name="image_compression"\r\n\r\n' \
-                   '{"lib_name":"jt","lib_version":"1.3.0","quality":"87"}\r\n' \
-                   '--%(boundary)s\r\n' \
-                   '%(sidecar_fields)s' \
-                   'Content-Disposition: form-data; name="photo"; filename="pending_media_%(ts)s.jpg"\r\n' \
-                   'Content-Type: application/octet-stream\r\n' \
-                   'Content-Transfer-Encoding: binary\r\n\r\n...\r\n' \
-                   '--%(boundary)s--\r\n'\
-                   % {'uuid': self.api.uuid,
+                       'Content-Disposition: form-data; name="upload_id"\r\n\r\n' \
+                       '%(upload_id)s\r\n' \
+                       '--%(boundary)s\r\n' \
+                       'Content-Disposition: form-data; name="_uuid"\r\n\r\n' \
+                       '%(uuid)s\r\n' \
+                       '--%(boundary)s\r\n' \
+                       'Content-Disposition: form-data; name="_csrftoken"\r\n\r\n' \
+                       '%(csrftoken)s\r\n' \
+                       '--%(boundary)s\r\n' \
+                       'Content-Disposition: form-data; name="image_compression"\r\n\r\n' \
+                       '{"lib_name":"jt","lib_version":"1.3.0","quality":"87"}\r\n' \
+                       '--%(boundary)s\r\n' \
+                       '%(sidecar_fields)s' \
+                       'Content-Disposition: form-data; name="photo"; filename="pending_media_%(ts)s.jpg"\r\n' \
+                       'Content-Type: application/octet-stream\r\n' \
+                       'Content-Transfer-Encoding: binary\r\n\r\n...\r\n' \
+                       '--%(boundary)s--\r\n'\
+                       % {'uuid': self.api.uuid,
                       'boundary': 'x' * 30,
                       'csrftoken': self.api.csrftoken,
                       'upload_id': upload_id,
                       'ts': str(int(ts_now * 1000)),
                       'sidecar_fields': sidecar_fields}
 
-            if not is_reel:
-                if for_video:
-                    self.api.post_photo(
-                        photo_data, size, caption=caption, upload_id=upload_id,
-                        location=location, disable_comments=disable_comments,
-                        is_sidecar=is_sidecar)
-                else:
-                    self.api.post_photo(
-                        photo_data, size, caption=caption,
-                        location=location, disable_comments=disable_comments,
-                        is_sidecar=is_sidecar)
-            else:
+            if is_reel:
                 self.api.post_photo_story(photo_data, size)
 
+            elif for_video:
+                self.api.post_photo(
+                    photo_data, size, caption=caption, upload_id=upload_id,
+                    location=location, disable_comments=disable_comments,
+                    is_sidecar=is_sidecar)
+            else:
+                self.api.post_photo(
+                    photo_data, size, caption=caption,
+                    location=location, disable_comments=disable_comments,
+                    is_sidecar=is_sidecar)
             request.assert_called_with(
                 '{0}{1}'.format(self.api.api_url.format(version='v1'), 'upload/photo/'),
                 body.encode('utf-8'), headers=headers)
@@ -329,7 +321,7 @@ class UploadTests(ApiTestBase):
                 if disable_comments:
                     configure_params['disable_comments'] = '1'
 
-                configure_params.update(self.api.authenticated_params)
+                configure_params |= self.api.authenticated_params
                 if not is_sidecar:
                     call_api.assert_called_with(
                         'media/configure/', params=configure_params
@@ -358,7 +350,7 @@ class UploadTests(ApiTestBase):
                         'source_height': size[1],
                     }
                 }
-                configure_params.update(self.api.authenticated_params)
+                configure_params |= self.api.authenticated_params
                 call_api.assert_called_with(
                     'media/configure_to_story/', params=configure_params
                 )

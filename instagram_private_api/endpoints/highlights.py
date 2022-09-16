@@ -36,7 +36,7 @@ class HighlightsEndpointsMixin(object):
         """
         query = {'include_cover': '0'}
         if kwargs:
-            query.update(kwargs)
+            query |= kwargs
         return self._call_api('archive/reel/day_shells/', query=query)
 
     def highlights_user_feed(self, user_id):
@@ -82,7 +82,7 @@ class HighlightsEndpointsMixin(object):
             'source': source,
             'title': title,
         }
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api('highlights/create_reel/', params=params)
 
     def highlight_edit(
@@ -135,7 +135,7 @@ class HighlightsEndpointsMixin(object):
             }
             params['cover'] = json.dumps(cover, separators=(',', ':'))
 
-        params.update(self.authenticated_params)
+        params |= self.authenticated_params
         return self._call_api(endpoint, params=params)
 
     def highlight_delete(self, highlight_id):

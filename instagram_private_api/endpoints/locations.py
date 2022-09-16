@@ -42,9 +42,12 @@ class LocationsEndpointsMixin(object):
         """
         endpoint = 'locations/{location_id!s}/related/'.format(**{'location_id': location_id})
         query = {
-            'visited': json.dumps([{'id': location_id, 'type': 'location'}], separators=(',', ':')),
-            'related_types': json.dumps(['location'], separators=(',', ':'))}
-        query.update(kwargs)
+            'visited': json.dumps(
+                [{'id': location_id, 'type': 'location'}], separators=(',', ':')
+            ),
+            'related_types': json.dumps(['location'], separators=(',', ':')),
+        } | kwargs
+
         return self._call_api(endpoint, query=query)
 
     def location_search(self, latitude, longitude, query=None, **kwargs):
@@ -64,7 +67,7 @@ class LocationsEndpointsMixin(object):
         }
         if query:
             query_params['search_query'] = query
-        query_params.update(kwargs)
+        query_params |= kwargs
         return self._call_api('location_search/', query=query_params)
 
     def location_fb_search(self, query, rank_token, exclude_list=[], **kwargs):
@@ -89,8 +92,8 @@ class LocationsEndpointsMixin(object):
             'count': 30,
             'exclude_list': json.dumps(exclude_list, separators=(',', ':')),
             'rank_token': rank_token,
-        }
-        query_params.update(kwargs)
+        } | kwargs
+
         return self._call_api('fbsearch/places/', query=query_params)
 
     def location_section(self, location_id, rank_token, tab='ranked', **kwargs):
@@ -110,7 +113,7 @@ class LocationsEndpointsMixin(object):
         """
         raise_if_invalid_rank_token(rank_token)
         if tab not in ('ranked', 'recent'):
-            raise ValueError('Invalid tab: {}'.format(tab))
+            raise ValueError(f'Invalid tab: {tab}')
 
         extract_media_only = kwargs.pop('extract', False)
         endpoint = 'locations/{location_id!s}/sections/'.format(**{'location_id': location_id})
@@ -131,7 +134,7 @@ class LocationsEndpointsMixin(object):
         kwargs.pop('page', None)
         kwargs.pop('next_media_ids', None)
 
-        params.update(kwargs)
+        params |= kwargs
         results = self._call_api(endpoint, params=params, unsigned=True)
         extracted_medias = []
         if self.auto_patch:
@@ -141,9 +144,7 @@ class LocationsEndpointsMixin(object):
                         ClientCompatPatch.media(m['media'], drop_incompat_keys=self.drop_incompat_keys)
                         if extract_media_only:
                             extracted_medias.append(m['media'])
-        if extract_media_only:
-            return extracted_medias
-        return results
+        return extracted_medias if extract_media_only else results
 
     def location_stories(self, location_id, **kwargs):
         """

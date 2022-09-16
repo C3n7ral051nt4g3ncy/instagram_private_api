@@ -54,8 +54,7 @@ class DiscoverTests(ApiTestBase):
 
     def test_top_live_status(self):
         results = self.api.discover_top_live()
-        broadcast_ids = [b['id'] for b in results.get('broadcasts', [])]
-        if broadcast_ids:
+        if broadcast_ids := [b['id'] for b in results.get('broadcasts', [])]:
             results = self.api.top_live_status(broadcast_ids)
             self.assertEqual(results.get('status'), 'ok')
             self.assertGreater(len(results.get('broadcast_status_items', [])), 0, 'No broadcast_status_items returned.')

@@ -63,7 +63,7 @@ class HighlightsTests(ApiTestBase):
             'source': 'x',
             'title': 'Test',
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
 
         self.api.highlight_create(
             media_ids, title=params['title'], source=params['source'])
@@ -103,7 +103,7 @@ class HighlightsTests(ApiTestBase):
             'source': 'x',
             'title': 'Test',
         }
-        params.update(self.api.authenticated_params)
+        params |= self.api.authenticated_params
 
         with self.assertRaises(ValueError):
             # test empty edit

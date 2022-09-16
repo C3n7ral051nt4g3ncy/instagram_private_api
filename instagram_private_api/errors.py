@@ -68,7 +68,7 @@ class ClientCheckpointRequiredError(ClientError):
             error_info = json.loads(self.error_response)
             return error_info.get('challenge', {}).get('url') or error_info.get('checkpoint_url')
         except ValueError as ve:
-            logger.warning('Error parsing error response: {}'.format(str(ve)))
+            logger.warning(f'Error parsing error response: {str(ve)}')
         return None
 
 
@@ -136,6 +136,6 @@ class ErrorHandler(object):
                 error_msg = http_error.reason
         except ValueError as ve:
             # do nothing else, prob can't parse json
-            logger.warning('Error parsing error response: {}'.format(str(ve)))
+            logger.warning(f'Error parsing error response: {str(ve)}')
 
         raise ClientError(error_msg, http_error.code, error_response)
